@@ -80,6 +80,6 @@ crossval = CrossValidator(estimator=pipeline2,
                         )
 
 cvModel2 = crossval.fit(train_df) 
-print("F1 Score for RandomForestClassifier Model: ", evaluator.evaluate(cvModel2.transform(validation_df)))
+print("F1 Score of RandomForestClassifier Model: ", evaluator.evaluate(cvModel2.transform(validation_df)))
 
-print("Since the LogisticRegression Model has a higher score than the RandomForestClassifier model, we use this one in our prediction application.")
+print("We choose the LogisticRegression Model in our prediction application since it outperforms the RandomForestClassifier model.")
