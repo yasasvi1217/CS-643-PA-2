@@ -37,4 +37,4 @@ accuracy = evaluator.evaluate(predictions)
 print("Test Error = %g " % (1.0 - accuracy))
 
 # Save the trained model
-model.save("/path/to/save/model")
+model.save("/home/ubuntu/model")
