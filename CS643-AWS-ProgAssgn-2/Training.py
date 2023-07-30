@@ -6,6 +6,7 @@ from pyspark.sql import SparkSession
 
 # Create a SparkSession
 spark = SparkSession.builder \
+    .config("spark.driver.host","localhost") \
     .appName("WineQualityPrediction") \
     .getOrCreate()
 
