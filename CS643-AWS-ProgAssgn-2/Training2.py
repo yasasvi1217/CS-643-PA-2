@@ -13,8 +13,8 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml import Pipeline
 
-spark = SparkSession \
-    .builder \
+spark = SparkSession.builder \
+    .config("spark.driver.host","localhost") \
     .appName("CS643_Wine_Quality_Predictions_Project") \
     .getOrCreate()
 
