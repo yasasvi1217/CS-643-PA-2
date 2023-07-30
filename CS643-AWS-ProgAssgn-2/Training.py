@@ -15,8 +15,8 @@ training = spark.read.format("csv").option("header","true").option("inferSchema"
 validation = spark.read.format("csv").option("header","true").option("inferSchema", "true").load("ValidationDataset.csv")
 
 # Define a VectorAssembler to combine all features into one vector
-features = ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", "chlorides", 
-                "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol", "quality"]  # Replace with your actual feature column names
+features = ['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar', 'chlorides', 
+                'free sulfur dioxide', 'total sulfur dioxide', 'density', 'pH', 'sulphates', 'alcohol', 'quality']  # Replace with your actual feature column names
 assembler = VectorAssembler(inputCols=features, outputCol="features")
 
 # Define the Logistic Regression model
