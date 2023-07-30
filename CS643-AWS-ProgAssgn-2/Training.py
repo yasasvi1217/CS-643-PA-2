@@ -1,85 +1,40 @@
-import random
-import sys 
-import numpy as np
-import pandas as pd
-import quinn
-
-from pyspark.sql.types import IntegerType, DoubleType
-from pyspark.sql.functions import col, desc
-from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, Normalizer, StandardScaler
-from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml import Pipeline
+from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.sql import SparkSession
 
-spark = SparkSession \
-            .builder \
-            .appName("CS643_Wine_Quality_Predictions_Project") \
-            .getOrCreate()
+# Create a SparkSession
+spark = SparkSession.builder \
+    .appName("WineQualityPrediction") \
+    .getOrCreate()
 
-## Load Training Dataset
-train_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('TrainingDataset.csv')
-validation_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('ValidationDataset.csv')
+# Load training and validation data
+training = spark.read.format("csv").option("header","true").option("inferSchema", "true").load("TrainingDataset.csv")
+validation = spark.read.format("csv").option("header","true").option("inferSchema", "true").load("ValidationDataset.csv")
 
-print("Data loaded from local directory on Master EC2 Instance.")
-print(train_df.toPandas().head())
+# Define a VectorAssembler to combine all features into one vector
+features = ["fixed acidity", "volatile acidity", "citric acid", "residual sugar", "chlorides", 
+                "free sulfur dioxide", "total sulfur dioxide", "density", "pH", "sulphates", "alcohol", "quality"]  # Replace with your actual feature column names
+assembler = VectorAssembler(inputCols=features, outputCol="features")
 
-def remove_quotations(s):
-    return s.replace('"', '')
+# Define the Logistic Regression model
+lr = LogisticRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
 
-train_df = quinn.with_columns_renamed(remove_quotations)(train_df)
-train_df = train_df.withColumnRenamed('quality', 'label')
+# Define a pipeline that chains the assembler and model
+pipeline = Pipeline(stages=[assembler, lr])
 
-validation_df = quinn.with_columns_renamed(remove_quotations)(validation_df)
-validation_df = validation_df.withColumnRenamed('quality', 'label')
+# Fit the model to the training data
+model = pipeline.fit(training)
 
-print("Data has been formatted.")
-print(train_df.toPandas().head())
+# Make predictions on the validation data
+predictions = model.transform(validation)
 
-assembler = VectorAssembler(
-    inputCols=["fixed acidity",
-               "volatile acidity",
-               "citric acid",
-               "residual sugar",
-               "chlorides",
-               "free sulfur dioxide",
-               "total sulfur dioxide",
-               "density",
-               "pH",
-               "sulphates",
-               "alcohol"],
-                outputCol="inputFeatures")
+# Evaluate the model's performance
+evaluator = MulticlassClassificationEvaluator(
+    labelCol="label", predictionCol="prediction", metricName="accuracy")
+accuracy = evaluator.evaluate(predictions)
+print("Test Error = %g " % (1.0 - accuracy))
 
-scaler = Normalizer(inputCol="inputFeatures", outputCol="features")
-
-lr = LogisticRegression()
-rf = RandomForestClassifier()
-
-pipeline1 = Pipeline(stages=[assembler, scaler, lr])
-pipeline2 = Pipeline(stages=[assembler, scaler, rf])
-
-paramgrid = ParamGridBuilder().build()
-
-evaluator = MulticlassClassificationEvaluator(metricName="f1")
-
-crossval = CrossValidator(estimator=pipeline1,  
-                         estimatorParamMaps=paramgrid,
-                         evaluator=evaluator, 
-                         numFolds=3
-                        )
-
-cvModel1 = crossval.fit(train_df) 
-print("F1 Score for LogisticRegression Model: ", evaluator.evaluate(cvModel1.transform(validation_df)))
-
-
-crossval = CrossValidator(estimator=pipeline2,  
-                         estimatorParamMaps=paramgrid,
-                         evaluator=evaluator, 
-                         numFolds=3
-                        )
-
-cvModel2 = crossval.fit(train_df) 
-print("F1 Score of RandomForestClassifier Model: ", evaluator.evaluate(cvModel2.transform(validation_df)))
-
-print("We choose the LogisticRegression Model in our prediction application since it outperforms the RandomForestClassifier model.")
+# Save the trained model
+model.save("/path/to/save/model")
